@@ -1,0 +1,90 @@
+import random
+import numpy as np
+
+# Definisikan fungsi fitness untuk TSP
+def calculate_fitness(individual, distance_matrix):
+    return 1 / total_distance(individual, distance_matrix)
+
+# Hitung total jarak untuk suatu rute (individu)
+def total_distance(individual, distance_matrix):
+    distance = 0
+    for i in range(len(individual) - 1):
+        distance += distance_matrix[individual[i]][individual[i + 1]]
+    distance += distance_matrix[individual[-1]][individual[0]]  # kembali ke kota awal
+    return distance
+
+# Inisialisasi populasi
+def initial_population(pop_size, num_cities):
+    population = []
+    for _ in range(pop_size):
+        individual = list(np.random.permutation(num_cities))
+        population.append(individual)
+    return population
+
+# Seleksi orang tua menggunakan roulette wheel selection
+def select_parents(population, fitnesses):
+    total_fitness = sum(fitnesses)
+    selection_probs = [fitness / total_fitness for fitness in fitnesses]
+    parents = np.random.choice(population, size=2, p=selection_probs)
+    return parents
+
+# Cross-over (recombination) antara dua orang tua
+def crossover(parent1, parent2):
+    child = [-1] * len(parent1)
+    start, end = sorted(random.sample(range(len(parent1)), 2))
+    child[start:end+1] = parent1[start:end+1]
+    pointer = 0
+    for gene in parent2:
+        if gene not in child:
+            while child[pointer] != -1:
+                pointer += 1
+            child[pointer] = gene
+    return child
+
+# Mutasi individu
+def mutate(individual, mutation_rate):
+    for i in range(len(individual)):
+        if random.random() < mutation_rate:
+            j = random.randint(0, len(individual) - 1)
+            individual[i], individual[j] = individual[j], individual[i]
+    return individual
+
+# Algoritma Genetika untuk TSP
+def genetic_algorithm_tsp(distance_matrix, pop_size=100, generations=500, mutation_rate=0.01):
+    num_cities = len(distance_matrix)
+    population = initial_population(pop_size, num_cities)
+    
+    for generation in range(generations):
+        fitnesses = [calculate_fitness(individual, distance_matrix) for individual in population]
+        new_population = []
+        
+        for _ in range(pop_size // 2):
+            parent1, parent2 = select_parents(population, fitnesses)
+            child1 = crossover(parent1, parent2)
+            child2 = crossover(parent2, parent1)
+            new_population.append(mutate(child1, mutation_rate))
+            new_population.append(mutate(child2, mutation_rate))
+        
+        population = new_population
+        best_individual = population[np.argmax(fitnesses)]
+        best_distance = total_distance(best_individual, distance_matrix)
+        
+        if generation % 50 == 0:
+            print(f"Generation {generation}: Best Distance = {best_distance}")
+
+    best_individual = population[np.argmax(fitnesses)]
+    best_distance = total_distance(best_individual, distance_matrix)
+    return best_individual, best_distance
+
+# Contoh distance matrix untuk TSP
+distance_matrix = [
+    [0, 2, 9, 10],
+    [1, 0, 6, 4],
+    [15, 7, 0, 8],
+    [6, 3, 12, 0]
+]
+
+# Jalankan Algoritma Genetika
+best_route, best_distance = genetic_algorithm_tsp(distance_matrix)
+print(f"Best Route: {best_route}")
+print(f"Best Distance: {best_distance}")
